@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Báo Cáo SXKD - Đội QLĐLKV Than Uyên </title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- ChartJS & Plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <!-- Excel processing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
+  <style>
+    /* 1. Cấu hình Font chữ Times New Roman cho toàn bộ trang */
+    body { 
+        font-family: "Times New Roman", Times, serif; 
+        background: #f3f4f6; 
+        color: #000; 
+        font-size: 13pt; /* Kích thước chuẩn văn bản */
+    }
+    
+    .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 16px; }
+    
+    /* Style bảng báo cáo cho đẹp và khi in ra */
+    .report-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; margin-bottom: 10px; }
+    .report-table th { background-color: #e5e7eb; font-weight: bold; text-align: center; padding: 5px; border: 1px solid #000; }
+    .report-table td { border: 1px solid #000; padding: 5px; vertical-align: middle; }
+    
+    /* Định dạng tiêu đề */
+    h1, h2, h3, h4 { font-weight: bold; color: #003366; margin-bottom: 0.5em; }
+    h1 { font-size: 18pt; text-transform: uppercase; }
+    h2 { font-size: 14pt; }
+    h3 { font-size: 14pt; border-bottom: 1px solid #000; padding-bottom: 5px; margin-top: 20px;}
+    
+    .hidden-print { display: block; }
+
+    /* Cấu hình khi in (Xuất PDF) */
+    @media print { 
+        .hidden-print { display: none !important; } 
+        body { background: white; padding: 0; }
+        .card { box-shadow: none; border: none; padding: 0; margin-bottom: 20px; }
+        /* Đảm bảo in màu nền của biểu đồ/bảng */
+        -webkit-print-color-adjust: exact; 
+        print-color-adjust: exact;
+        /* Ngắt trang hợp lý */
+        section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8">
+
+  <div class="max-w-7xl mx-auto">
+    <!-- HEADER: Sẽ được đưa vào Word -->
+    <div class="card flex justify-between items-start bg-white" id="report-header">
+      <div style="text-align: left;">
+        <h2 style="font-size: 12pt; font-weight: bold; margin: 0;">CÔNG TY ĐIỆN LỰC LAI CHÂU</h2>
+        <h1 style="font-size: 14pt; font-weight: bold; color: #003366; margin: 5px 0;">ĐỘI QLĐLKV THAN UYÊN</h1>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 16pt; font-weight: 900; color: #003366;">BÁO CÁO SẢN XUẤT KINH DOANH</div>
+        <div style="font-size: 14pt; font-weight: bold; color: #cc0000; margin-top: 5px;" id="display-period">Tháng -- Năm ----</div>
+      </div>
+    </div>
+
+    <!-- CONTROLS AREA -->
+    <div class="card hidden-print space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- File Uploads -->
+        <div class="space-y-2">
+          <p class="font-bold text-sm text-gray-700">1. Nạp dữ liệu đầu vào:</p>
+          <div class="flex flex-wrap gap-2">
+            <input type="file" id="f-bc" accept=".xlsx,.xls" hidden />
+            <button onclick="document.getElementById('f-bc').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition font-bold">
+              📂 1. Upload Baocao_tonghop
+            </button>
+
+            <input type="file" id="f-bckd" accept=".xlsx,.xls" hidden />
+            <button onclick="document.getElementById('f-bckd').click()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded text-sm transition font-bold">
+              📂 2. Upload BCKD_Thang
+            </button>
+            
+            <input type="file" id="f-ecp" accept=".xlsx,.xls" hidden />
+            <button onclick="document.getElementById('f-ecp').click()" class="bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded text-sm transition font-bold">
+              📂 3. Upload ECP
+            </button>
+          </div>
+          <div id="file-status" class="text-xs text-gray-500 italic mt-1">Chưa có file nào được chọn.</div>
+        </div>
+
+        <!-- Month/Year Selection -->
+        <div class="space-y-2 border-l pl-4 border-gray-200">
+          <p class="font-bold text-sm text-gray-700">2. Chọn kỳ báo cáo (Quan trọng):</p>
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1">
+              <span class="text-sm">Tháng:</span>
+              <select id="sel-month" class="border rounded p-1.5 bg-gray-50 font-bold text-blue-800"></select>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-sm">Năm:</span>
+              <select id="sel-year" class="border rounded p-1.5 bg-gray-50 font-bold text-blue-800"></select>
+            </div>
+            <button id="btn-apply-period" class="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded text-sm font-bold shadow-sm">
+              ÁP DỤNG
+            </button>
+          </div>
+          <p class="text-xs text-gray-500">Chọn thời gian để lọc dữ liệu KPI và Sự cố từ file tổng hợp.</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap gap-2 border-t pt-4 mt-2">
+        <button id="btn-manual" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 text-sm">Nhập tay số liệu dây</button>
+        <div class="flex-grow"></div>
+        <button id="btn-gen" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold shadow text-sm">
+          TẠO BÁO CÁO
+        </button>
+        <button id="btn-export-word" class="bg-blue-800 hover:bg-blue-900 text-white px-4 py-2 rounded text-sm font-bold">
+          Xuất file Word
+        </button>
+        <!-- Thay thế nút Powerpoint bằng nút Xuất PDF/Ảnh (Presentation) -->
+        <button id="btn-export-ppt" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm font-bold" title="Sử dụng chức năng In của trình duyệt để tạo PDF hoặc ảnh chất lượng cao để trình bày">
+          Xuất PDF/Ảnh (Presentation)
+        </button>
+        <button id="btn-export-pdf" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded text-sm font-bold" title="Kích hoạt hộp thoại In/Lưu PDF của trình duyệt">
+          In / Lưu PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- MANUAL INPUT SECTION -->
+    <div id="manual-area" class="card hidden hidden-print">
+      <h3 class="font-bold text-gray-700 mb-2">Nhập tay chiều dài/tiết diện dây (Đơn vị: km):</h3>
+      <!-- Bổ sung thêm Đường dây hạ thế -->
+      <!-- Tổng chiều dài sẽ được tính toán lại trong JS (Chỉ tính trung thế) -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <input id="m-total" placeholder="Tổng chiều dài TT (km)" class="border p-2 rounded text-sm" value="">
+        <input id="m-371" placeholder="371 E29.2 (km)" class="border p-2 rounded text-sm" value="64.61">
+        <input id="m-373" placeholder="373 E29.2 (km)" class="border p-2 rounded text-sm" value="70.23">
+        <input id="m-375" placeholder="375 E29.2 (km)" class="border p-2 rounded text-sm" value="37.82">
+        <input id="m-376" placeholder="376 E29.2 (km)" class="border p-2 rounded text-sm" value="40.23">
+        <input id="m-377" placeholder="377 E29.2 (km)" class="border p-2 rounded text-sm" value="71.77">
+        <input id="m-378" placeholder="378 E29.2 (km)" class="border p-2 rounded text-sm" value="51.27">
+        <input id="m-lt" placeholder="Đường dây hạ thế (km)" class="border p-2 rounded text-sm" value="667.40 ">
+      </div>
+      <textarea id="m-other" class="w-full border p-2 rounded mt-3 text-sm" placeholder="Nhập nội dung mục 6 (Công tác khác)..."></textarea>
+    </div>
+
+    <!-- REPORT CONTENT AREA -->
+    <div id="report-content" class="min-h-screen hidden bg-white p-4">
+      
+      <!-- 1. QUẢN TRỊ -->
+      <section class="mb-8">
+        <h3>1. CÔNG TÁC QUẢN TRỊ</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="h-64 border p-2"><canvas id="c-age"></canvas></div>
+          <div class="h-64 border p-2"><canvas id="c-dept"></canvas></div>
+          <div class="h-64 border p-2"><canvas id="c-qual"></canvas></div>
+        </div>
+      </section>
+
+      <!-- 2. KINH DOANH -->
+      <section class="mb-8">
+        <h3>2. CÔNG TÁC KINH DOANH & DVKH</h3>
+        <div id="bckd-table-area" class="overflow-x-auto mb-4"></div>
+      </section>
+
+      <!-- 3. KỸ THUẬT -->
+      <section class="mb-8">
+        <h3>3. CÔNG TÁC QUẢN LÝ KỸ THUẬT</h3>
+        
+        <!-- 3.1 TBA -->
+        <div class="mb-6">
+          <h4 class="font-bold text-black mb-2">3.1. Số liệu Trạm biến áp (Tổng hợp theo đường dây)</h4>
+          <div id="tba-summary-area" class="overflow-x-auto"></div>
+        </div>
+
+        <!-- 3.2 Dây -->
+        <div class="mb-6">
+          <h4 class="font-bold text-black mb-2">3.2. Tổng chiều dài đường dây trung thế</h4>
+          <div id="wire-summary" class="bg-gray-50 p-3 border text-sm"></div>
+        </div>
+
+        <!-- 3.3 Sự cố -->
+        <div>
+  <h4 class="font-bold text-black mb-2">3.3. Tình hình sự cố</h4>
+
+  <!-- Biểu đồ tháng -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div class="h-64 border p-2"><canvas id="c-inc-type"></canvas></div>
+    <div class="h-64 border p-2"><canvas id="c-inc-nature"></canvas></div>
+  </div>
+
+  <!-- Ô lũy kế -->
+  <div id="incident-cumulative-box" class="p-3 mb-4 bg-yellow-100 border border-yellow-500 text-black font-bold text-center">
+      Lũy kế sự cố: <span id="incident-cum-value">0</span> vụ
+  </div>
+
+  <!-- Biểu đồ lũy kế -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="h-64 border p-2"><canvas id="c-inc-type-cum"></canvas></div>
+      <div class="h-64 border p-2"><canvas id="c-inc-nature-cum"></canvas></div>
+  </div>
+
+  <div id="incident-list-area"></div>
+</div>
+      </section>
+	
+	<!-- 3.4 BÁO CÁO TỔN THẤT -->
+<div class="mb-6">
+  <h4 class="font-bold text-black mb-2">3.4. Báo cáo tổn thất</h4>
+
+  <!-- 3.4.1 -->
+  <h5 class="font-bold text-blue-700">3.4.1. Tổn thất đơn vị kỳ thương phẩm</h5>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="h-64 border p-2"><canvas id="loss-ky"></canvas></div>
+    <div class="h-64 border p-2"><canvas id="loss-ky-cum"></canvas></div>
+  </div>
+
+  <!-- 3.4.2 -->
+  <h5 class="font-bold text-blue-700">3.4.2. Tổn thất đơn vị cấp điện áp</h5>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="h-64 border p-2"><canvas id="loss-cap"></canvas></div>
+    <div class="h-64 border p-2"><canvas id="loss-cap-cum"></canvas></div>
+  </div>
+
+  <!-- 3.4.3 -->
+  <h5 class="font-bold text-blue-700">3.4.3. Tổn thất trung áp</h5>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="h-64 border p-2"><canvas id="loss-mid"></canvas></div>
+    <div class="h-64 border p-2"><canvas id="loss-mid-cum"></canvas></div>
+  </div>
+
+  <!-- 3.4.4 -->
+  <h5 class="font-bold text-blue-700">3.4.4. Tổn thất hạ áp</h5>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="h-64 border p-2"><canvas id="loss-low"></canvas></div>
+    <div class="h-64 border p-2"><canvas id="loss-low-cum"></canvas></div>
+  </div>
+
+</div>
+
+      <!-- 4. AN TOÀN -->
+<section class="mb-8">
+  <h3>4. CÔNG TÁC AN TOÀN (ECP)</h3>
+
+  <!-- Hàng 1: PLV tháng + Tỷ lệ hoãn hủy -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div class="h-64 border p-2"><canvas id="c-ecp1"></canvas></div>
+    <div class="h-64 border p-2"><canvas id="c-ecp2"></canvas></div>
+  </div>
+
+  <!-- Hàng 2: PLV lũy kế + Lũy kế hoãn hủy -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="h-64 border p-2"><canvas id="c-ecp3"></canvas></div>
+    <div class="h-64 border p-2"><canvas id="c-ecp4"></canvas></div>
+  </div>
+
+</section>
+
+      <!-- 5. KPI -->
+      <section class="mb-8">
+        <h3>5. CHỈ TIÊU KPI</h3>
+        <div class="grid grid-cols-1 gap-6">
+            <div>
+                <h4 class="font-bold text-sm text-center mb-2">Biểu đồ 5.1: KPI các đơn vị tháng báo cáo</h4>
+                <div class="h-80 border p-2"><canvas id="c-kpi-all"></canvas></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <h4 class="font-bold text-sm text-center mb-2">Biểu đồ 5.2: Lũy kế KPI Than Uyên</h4>
+                    <div class="h-64 border p-2"><canvas id="c-kpi-cumulative"></canvas></div>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm text-center mb-2">Biểu đồ 5.3: So sánh cùng kỳ</h4>
+                    <div class="h-64 border p-2"><canvas id="c-kpi-yoy"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div id="kpi-debug" class="text-xs text-red-400 mt-2"></div>
+      </section>
+
+      <!-- 6. KHÁC -->
+      <section class="mb-8">
+        <h3>6. CÁC CÔNG TÁC KHÁC</h3>
+        <div id="other-content" class="text-sm whitespace-pre-line text-gray-700"></div>
+      </section>
+
+      <div class="text-right text-sm italic mt-8 pb-8">
+        Than Uyên, ngày <span id="print-date"></span><br>
+        <strong>Người lập biểu</strong>
+      </div>
+    </div>
+  </div>
+
+<script>
+// --- CẤU HÌNH CHART JS ---
+Chart.register(ChartDataLabels);
+Chart.defaults.font.family = "'Times New Roman', serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#000';
+Chart.defaults.maintainAspectRatio = false;
+
+// NOTE: We keep a safe default datalabels formatter here, but createChart accepts a forceInteger flag
+Chart.defaults.set('plugins.datalabels', {
+  display: true,
+  color: '#000',
+  anchor: 'end',
+  align: 'top',
+  offset: 2,
+  font: { weight: 'bold', size: 10 },
+  formatter: (value) => {
+    if (value === 0) return '';
+    if (value > 1000) return (value / 1000).toFixed(1) + 'k';
+    // default (may be overridden by createChart forceInteger)
+    return parseFloat(value).toFixed(2).replace(/\.00$/, '').toLocaleString('vi-VN');
+  } 
+});
+
+// GLOBAL STATE
+const state = {
+  files: { baocao: null, bckd: null, ecp: null },
+  month: new Date().getMonth() + 1,
+  year: new Date().getFullYear(),
+  charts: [] // some code pushes charts; createChart stores by id to avoid duplicates
+};
+
+// Colors for charts with multiple categories
+const CHART_COLORS = [
+    '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#8b5cf6',
+    '#06b6d4', '#f97316', '#14b8a6', '#a855f7', '#fb923c', '#d946ef', '#0ea5e9',
+    '#e11d48', '#059669', '#ca8a04', '#7c3aed', '#be185d', '#4f46e5', '#22c3e5'
+];
+
+// --- KHỞI TẠO ---
+(function init() {
+  const selMonth = document.getElementById('sel-month');
+  for(let i=1; i<=12; i++) selMonth.add(new Option(i, i));
+  selMonth.value = state.month;
+
+  const selYear = document.getElementById('sel-year');
+  const curY = new Date().getFullYear();
+  const maxYear = 2030;
+  for(let i=curY-3; i<=maxYear; i++) selYear.add(new Option(i, i));
+  selYear.value = state.year;
+
+  document.getElementById('display-period').innerText = `Tháng ${state.month} Năm ${state.year}`;
+  document.getElementById('print-date').innerText = new Date().toLocaleDateString('vi-VN');
+})();
+
+// --- SỰ KIỆN DOM ---
+document.getElementById('btn-apply-period').onclick = () => {
+  state.month = parseInt(document.getElementById('sel-month').value);
+  state.year = parseInt(document.getElementById('sel-year').value);
+  document.getElementById('display-period').innerText = `Tháng ${state.month} Năm ${state.year}`;
+  const statusEl = document.getElementById('file-status');
+  statusEl.innerHTML = `<span class="text-blue-600 font-bold">Đã chọn: T${state.month}/${state.year}. Nhấn "TẠO BÁO CÁO".</span>`;
+};
+
+document.getElementById('btn-manual').onclick = () => {
+  document.getElementById('manual-area').classList.toggle('hidden');
+};
+
+document.getElementById('btn-export-ppt').onclick = () => {
+    const reportNode = document.getElementById('report-content');
+    if (reportNode.classList.contains('hidden')) {
+        const genButton = document.getElementById('btn-gen');
+        genButton.textContent = 'Vui lòng TẠO BÁO CÁO trước!';
+        genButton.classList.add('animate-pulse');
+        setTimeout(() => {
+            genButton.textContent = 'TẠO BÁO CÁO';
+            genButton.classList.remove('animate-pulse');
+        }, 3000);
+        return;
+    }
+    window.print();
+};
+
+
+const handleFile = (e, key) => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data, {type: 'array', cellDates: false});
+    const json = {};
+    workbook.SheetNames.forEach(name => {
+      json[name] = XLSX.utils.sheet_to_json(workbook.Sheets[name], {header: 1, defval: ''});
+    });
+    state.files[key] = json;
+    updateFileStatus();
+  };
+  reader.readAsArrayBuffer(f);
+};
+
+document.getElementById('f-bc').onchange = (e) => handleFile(e, 'baocao');
+document.getElementById('f-bckd').onchange = (e) => handleFile(e, 'bckd');
+document.getElementById('f-ecp').onchange = (e) => handleFile(e, 'ecp');
+
+function updateFileStatus() {
+  const s = state.files;
+  const list = [];
+  if(s.baocao) list.push('Baocao_tonghop');
+  if(s.bckd) list.push('BCKD_Thang');
+  if(s.ecp) list.push('ECP');
+  document.getElementById('file-status').innerText = list.length ? "Đã nạp: " + list.join(', ') : "Chưa có file nào.";
+}
+
+// --- MAIN GENERATE FUNCTION ---
+document.getElementById('btn-gen').onclick = () => {
+  // Destroy charts stored as array
+  state.charts.forEach(c => { try { c.destroy(); } catch(e){} });
+  state.charts = [];
+  // Destroy charts stored by id (safety)
+  Object.keys(state.charts).forEach(k => {
+    try { if(state.charts[k] && state.charts[k].destroy) state.charts[k].destroy(); } catch(e){}
+  });
+
+  document.getElementById('report-content').classList.remove('hidden');
+
+  renderSection1_HR();
+  renderSection2_Business();
+  renderSection3_Tech();
+  renderSection4_Safety();
+  renderSection5_KPI();
+  renderSection6_Other();
+
+  document.getElementById('report-content').scrollIntoView({behavior:'smooth'});
+};
+
+// --- RENDER SECTION 1 (HR) ---
+function renderSection1_HR() {
+  const data = state.files.baocao ? (state.files.baocao['CBCNV'] || Object.values(state.files.baocao)[0]) : [];
+  if(!data || data.length < 2) return; 
+  const rows = data.slice(1);
+  const ageStats = {'<30':0, '30-40':0, '40-50':0, '>50':0};
+  const qualStats = {};
+  const deptStats = {};
+  const header = data[0].map(x => String(x).toLowerCase());
+  const idxAge = header.findIndex(h => h.includes('độ tuổi')) !== -1 ? header.findIndex(h => h.includes('độ tuổi')) : 16;
+  const idxQual = header.findIndex(h => h.includes('trình độ') || h.includes('chuyên môn')) !== -1 ? header.findIndex(h => h.includes('trình độ')) : 8;
+  const idxDept = header.findIndex(h => h.includes('bộ phận') || h.includes('đơn vị')) !== -1 ? header.findIndex(h => h.includes('bộ phận')) : 13;
+
+  rows.forEach(r => {
+    if(!r[0]) return;
+    const age = parseInt(r[idxAge]) || 0;
+    if(age > 0) {
+      if(age < 30) ageStats['<30']++;
+      else if(age <= 40) ageStats['30-40']++;
+      else if(age <= 50) ageStats['40-50']++;
+      else ageStats['>50']++;
+    }
+    const q = String(r[idxQual] || 'Khác').trim();
+    qualStats[q] = (qualStats[q] || 0) + 1;
+    const d = String(r[idxDept] || 'Khác').trim();
+    deptStats[d] = (deptStats[d] || 0) + 1;
+  });
+  // Sử dụng createChart với màu sắc riêng cho từng cột
+  createChart('c-age', 'doughnut', ageStats, 'Độ tuổi', true);
+  createChart('c-qual', 'bar', qualStats, 'Trình độ', true);
+  createChart('c-dept', 'bar', deptStats, 'Bộ phận', true);
+}
+
+// --- RENDER SECTION 2 (Business) ---
+function renderSection2_Business() {
+  const container = document.getElementById('bckd-table-area');
+  container.innerHTML = '';
+  if(!state.files.bckd) return;
+  const sheet = Object.values(state.files.bckd)[0];
+  if(!sheet || sheet.length < 2) return;
+  const header = ['STT', 'Chỉ tiêu', 'ĐVT', 'Thực hiện', 'Lũy kế'];
+  let html = '<table class="report-table"><thead><tr>';
+  header.forEach(h => html += `<th>${h}</th>`);
+  html += '</tr></thead><tbody>';
+  const rawData = sheet.slice(1);
+  let sttCounter = 1;
+  rawData.forEach((row, index) => {
+    if (index === 19 || index === 20) return; 
+    if (sttCounter > 25) return;
+    const chiTieu = row[1] || '';
+    if(!chiTieu) return;
+    const dvt = row[2] || '';
+    const kh = parseFloat(row[3]) || 0;
+    const th = parseFloat(row[4]) || 0;
+    html += `<tr><td class="text-center">${sttCounter++}</td><td>${chiTieu}</td><td class="text-center">${dvt}</td><td class="text-right">${kh.toLocaleString('vi-VN')}</td><td class="text-right font-bold">${th.toLocaleString('vi-VN')}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// ========================
+// 3.3 BÁO CÁO TỔN THẤT (Loss) - giữ nguyên logic
+// ========================
+function renderLossReport() {
+
+  const mapping = [
+    { sheet: "Tổn thất đơn vị kỳ thương phẩm", id: "loss-ky", idCum: "loss-ky-cum" },
+    { sheet: "Tổn thất đơn vị cấp điện áp", id: "loss-cap", idCum: "loss-cap-cum" },
+    { sheet: "Tổn thất trung áp", id: "loss-mid", idCum: "loss-mid-cum" },
+    { sheet: "Tổn thất hạ áp", id: "loss-low", idCum: "loss-low-cum" }
+  ];
+
+  mapping.forEach(item => {
+    const sheet = state.files.baocao[item.sheet];
+    if (!sheet || sheet.length < 2) return;
+
+    const rows = sheet.slice(1); 
+    let labels = [];
+    let values = [];
+    let cumValues = [];
+
+    let sumC = 0, sumD = 0;
+
+    rows.forEach(r => {
+      const year = parseInt(r[0]);
+      const month = parseInt(r[1]);
+      const cVal = parseFloat(r[2]) || 0;
+      const dVal = parseFloat(r[3]) || 0;
+      const loss = parseFloat(r[4]) || 0;
+
+      if (month === state.month) {
+        labels.push(year.toString());
+        values.push(Number(loss));   // không format tại đây
+      }
+
+      if (year === state.year && month <= state.month) {
+        sumC += cVal;
+        sumD += dVal;
+        cumValues.push((sumD / sumC) * 100);
+      }
+    });
+
+    // Biểu đồ cột so sánh cùng kỳ
+    createChart(item.id, "bar", Object.fromEntries(labels.map((y,i)=>[y,values[i]])), "Tỷ lệ tổn thất", true);
+
+    // Biểu đồ lũy kế
+    createChart(item.idCum, "line", 
+      Object.fromEntries(cumValues.map((v,i)=>[`T${i+1}`, v])),
+      "Lũy kế tổn thất", 
+      true);
+  });
+}
+
+// 3. KỸ THUẬT
+function renderSection3_Tech() {
+  renderLossReport();
+
+  // 3.1 TBA (yêu cầu: tổng cộng)
+  const tbaArea = document.getElementById('tba-summary-area');
+  tbaArea.innerHTML = '';
+  const targetLines = ['371E29.2', '373E29.2', '375E29.2', '376E29.2', '377E29.2', '378E29.2']; 
+  const tbaDataSheet = state.files.baocao ? (state.files.baocao['Tên các TBA'] || state.files.baocao['TBA']) : null;
+  
+  let totalCount = 0;
+  let totalKVA = 0;
+  let totalDl = 0;
+  let totalKh = 0;
+
+  if(tbaDataSheet) {
+    const data = tbaDataSheet;
+    const idxLine = 2; const idxCap = 5; const idxOwner = 7;
+    const agg = {};
+    data.slice(1).forEach(r => {
+      const lineName = String(r[idxLine] || '').trim();
+      if (!targetLines.includes(lineName)) return; 
+      
+      const capStr = String(r[idxCap] || '0').toUpperCase().replace('KVA', '').trim();
+      const cap = parseFloat(capStr) || 0;
+      const owner = String(r[idxOwner] || '').toLowerCase();
+      
+      if(!agg[lineName]) agg[lineName] = { count: 0, kva: 0, kh: 0, dl: 0 };
+      
+      agg[lineName].count++; agg[lineName].kva += cap;
+      if(owner.includes('khách hàng') || owner.includes('kh')) { agg[lineName].kh++; totalKh++; } else { agg[lineName].dl++; totalDl++; }
+      
+      totalCount++; 
+      totalKVA += cap;
+    });
+
+    let html = `<table class="report-table"><thead><tr><th rowspan="2">Đường dây</th><th colspan="2">Tổng cộng</th><th colspan="2">Tài sản Điện lực</th><th colspan="2">Tài sản Khách hàng</th></tr><tr><th>SL</th><th>kVA</th><th>SL</th><th>%</th><th>SL</th><th>%</th></tr></thead><tbody>`;
+    Object.keys(agg).sort().forEach(line => {
+      const d = agg[line];
+      const pDl = d.count>0?((d.dl/d.count)*100).toFixed(0):0;
+      const pKh = d.count>0?((d.kh/d.count)*100).toFixed(0):0;
+      html += `<tr>
+                  <td class="font-bold">${line}</td>
+                  <td class="text-center font-bold">${d.count}</td>
+                  <td class="text-right">${d.kva.toLocaleString('vi-VN')}</td>
+                  <td class="text-center">${d.dl}</td>
+                  <td class="text-center">${pDl}%</td>
+                  <td class="text-center">${d.kh}</td>
+                  <td class="text-center">${pKh}%</td>
+              </tr>`;
+    });
+    
+    const totalPdl = totalCount > 0 ? ((totalDl/totalCount)*100).toFixed(0) : 0;
+    const totalPkh = totalCount > 0 ? ((totalKh/totalCount)*100).toFixed(0) : 0; 
+    html += `<tr>
+                <td class="font-bold bg-gray-200">TỔNG CỘNG</td>
+                <td class="text-center font-bold bg-gray-200">${totalCount}</td>
+                <td class="text-right font-bold bg-gray-200">${totalKVA.toLocaleString('vi-VN')}</td>
+                <td class="text-center font-bold bg-gray-200">${totalDl}</td>
+                <td class="text-center font-bold bg-gray-200">${totalPdl}%</td>
+                <td class="text-center font-bold bg-gray-200">${totalKh}</td>
+                <td class="text-center font-bold bg-gray-200">${totalPkh}%</td>
+            </tr>`;
+    
+    html += '</tbody></table>';
+    tbaArea.innerHTML = html;
+  }
+
+  // 3.2 Dây
+  let totalLengthTT = 0;
+  const wireInputsTT = ['m-371','m-373','m-375','m-376','m-377','m-378']; 
+  wireInputsTT.forEach(id=>{ totalLengthTT += parseFloat(document.getElementById(id).value)||0; });
+  document.getElementById('m-total').value = totalLengthTT.toFixed(1);
+  
+  document.getElementById('wire-summary').innerHTML = `<ul class="grid grid-cols-2 gap-2">
+    <li class="font-bold text-blue-800">Tổng chiều dài đường dây trung thế: ${totalLengthTT.toFixed(1)} km</li>
+    <li>371 E29.2: ${document.getElementById('m-371').value} km</li>
+    <li>373 E29.2: ${document.getElementById('m-373').value} km</li>
+    <li>375 E29.2: ${document.getElementById('m-375').value} km</li>
+    <li>376 E29.2: ${document.getElementById('m-376').value} km</li>
+    <li>377 E29.2: ${document.getElementById('m-377').value} km</li>
+    <li>378 E29.2: ${document.getElementById('m-378').value} km</li>
+    <li class="font-bold text-red-700">Đường dây hạ thế: ${document.getElementById('m-lt').value} km</li>
+    </ul>`;
+
+  // 3.3 Sự cố
+  const incArea = document.getElementById('incident-list-area');
+  incArea.innerHTML = '';
+  const incData = state.files.baocao ? (state.files.baocao['Quản lý sự cố'] || state.files.baocao['Sự cố']) : null;
+  
+  if(incData) {
+    // Chỉ số cột (A=0...)
+    const idxLocation = 2; // C
+    const idxReason = 3;   // D
+    const idxType = 4;     // E
+    const idxDate = 5;     // F
+    const idxNature = 8;   // I
+    const idxLine = 9;     // J
+    const idxMonthYear = 10; // K
+
+    // Lọc sự cố trong tháng hiện tại
+    const filteredInc = incData.slice(1).filter(r => {
+      let d = null;
+      const kValue = r[idxMonthYear];
+      
+      if (kValue) {
+          if (typeof kValue === 'string') {
+              if (kValue.includes('-')) {
+                  const parts = kValue.split('-'); // YYYY-MM-DD
+                  if (parts.length === 3) d = new Date(parts[0], parts[1] - 1, parts[2]);
+              } else if (kValue.includes('/')) {
+                  const parts = kValue.split('/'); // DD/MM/YYYY
+                  d = new Date(parts[2], parts[1] - 1, parts[0]);
+              }
+          } else if (typeof kValue === 'number') {
+              d = new Date((kValue - (25567 + 2)) * 86400 * 1000);
+          }
+      }
+      // fallback cột F
+      if (!d && r[idxDate]) {
+          const fValue = r[idxDate];
+           if (typeof fValue === 'string') {
+               const datePart = fValue.substring(0, 10); 
+               if(datePart.includes('/')) {
+                   const parts = datePart.split('/');
+                   d = new Date(parts[2], parts[1]-1, parts[0]);
+               }
+           } else if (typeof fValue === 'number') {
+               d = new Date((fValue - (25567 + 2)) * 86400 * 1000);
+           }
+      }
+
+      if(d && !isNaN(d.getTime())) {
+        return d.getMonth() + 1 === state.month && d.getFullYear() === state.year;
+      }
+      return false;
+    });
+
+    const typeStats = {}; const natureStats = {};
+    let html = '<table class="report-table mt-2"><thead><tr><th>STT</th><th>Ngày</th><th>Đường dây</th><th>Vị trí/Thiết bị</th><th>Tóm tắt Nguyên nhân</th><th>Tính chất</th><th>Loại sự cố</th></tr></thead><tbody>';
+    
+    if(filteredInc.length === 0) {
+      html += '<tr><td colspan="7" class="text-center italic">Không có sự cố trong tháng.</td></tr>';
+    }
+
+    filteredInc.forEach((r, idx) => {
+        // Format ngày
+        let rawDate = r[idxMonthYear] || r[idxDate];
+        let dateStr = '---';
+        
+        let dObj = null;
+        if(typeof rawDate === 'number') {
+             dObj = new Date((rawDate - (25567 + 2)) * 86400 * 1000);
+        } else if (typeof rawDate === 'string') {
+             if(rawDate.includes('-')) {
+                 const p = rawDate.split('-'); dObj = new Date(p[0], p[1]-1, p[2]);
+             } else if(rawDate.includes('/')) {
+                 const p = rawDate.split(' ')[0].split('/'); 
+                 if(p.length === 3) dObj = new Date(p[2], p[1]-1, p[0]);
+             }
+        }
+        
+        if(dObj && !isNaN(dObj.getTime())) {
+            dateStr = `${String(dObj.getDate()).padStart(2,'0')}/${String(dObj.getMonth()+1).padStart(2,'0')}/${dObj.getFullYear()}`;
+        } else {
+            dateStr = String(rawDate).substring(0, 10);
+        }
+
+        const location = r[idxLocation] || '';
+        const reason = r[idxReason] || '';
+        const nature = r[idxNature] || '';
+        const line = r[idxLine] || '';
+        const type = r[idxType] || '';
+
+        html += `<tr>
+            <td class="text-center">${idx + 1}</td>
+            <td>${dateStr}</td>
+            <td>${line}</td>
+            <td>${location}</td>
+            <td>${reason}</td>
+            <td>${nature}</td>
+            <td>${type}</td>
+        </tr>`;
+
+        // Chart Data (for monthly charts)
+        const t = String(type).trim(); if(t) typeStats[t] = (typeStats[t] || 0) + 1;
+        const n = String(nature).trim(); if(n) natureStats[n] = (natureStats[n] || 0) + 1;
+    });
+    html += '</tbody></table>';
+    incArea.innerHTML = html;
+
+    // Monthly charts (existing)
+    createChart('c-inc-type', 'pie', typeStats, 'Phân loại', true);
+    createChart('c-inc-nature', 'bar', natureStats, 'Tính chất', true);
+
+    // =====================
+    // TÍNH & VẼ LŨY KẾ SỰ CỐ (Đặt ở đây - trong scope renderSection3_Tech)
+    // =====================
+    // Lũy kế trong năm (tính theo tháng 1..state.month)
+    const cumTypeStats = {};
+    const cumNatureStats = {};
+    let totalCum = 0;
+
+    // iterate through all rows and count those with year == state.year and month <= state.month
+    incData.slice(1).forEach(r => {
+        let d = null;
+        const kValue = r[idxMonthYear];
+        if (kValue) {
+            if (typeof kValue === 'number') {
+                d = new Date((kValue - (25567 + 2)) * 86400 * 1000);
+            } else if (typeof kValue === 'string') {
+                if (kValue.includes('-')) {
+                    const p = kValue.split('-'); d = new Date(p[0], p[1]-1, p[2]);
+                } else if (kValue.includes('/')) {
+                    const p = kValue.split('/'); d = new Date(p[2], p[1]-1, p[0]);
+                }
+            }
+        }
+        // fallback to idxDate
+        if(!d && r[idxDate]) {
+            const f = r[idxDate];
+            if(typeof f === 'number') {
+                d = new Date((f - (25567 + 2)) * 86400 * 1000);
+            } else if (typeof f === 'string') {
+                if (f.includes('-')) {
+                    const p = f.split('-'); d = new Date(p[0], p[1]-1, p[2]);
+                } else if (f.includes('/')) {
+                    const p = f.split(' ')[0].split('/'); if(p.length===3) d = new Date(p[2], p[1]-1, p[0]);
+                }
+            }
+        }
+
+        if (d && !isNaN(d.getTime())) {
+            const y = d.getFullYear();
+            const m = d.getMonth() + 1;
+            if (y === state.year && m <= state.month) {
+                totalCum++;
+                const t = String(r[idxType] || '').trim(); if(t) cumTypeStats[t] = (cumTypeStats[t] || 0) + 1;
+                const n = String(r[idxNature] || '').trim(); if(n) cumNatureStats[n] = (cumNatureStats[n] || 0) + 1;
+            }
+        }
+    });
+
+    // Show total in the yellow box as integer
+    const cumBox = document.getElementById('incident-cum-value');
+    if (cumBox) cumBox.innerText = totalCum;
+
+    // Create the two cumulative charts (force integer labels)
+    createChart('c-inc-type-cum', 'bar', cumTypeStats, 'Lũy kế theo phân loại', true, true);
+    createChart('c-inc-nature-cum', 'bar', cumNatureStats, 'Lũy kế theo tính chất', true, true);
+
+  } else {
+    incArea.innerHTML = '<p class="text-red-500">Thiếu sheet "Quản lý sự cố".</p>';
+  }
+}
+
+// 4. AN TOÀN (ECP)
+function renderSection4_Safety() {
+
+  const year = state.year;
+  const month = state.month;
+
+  if (!state.files.ecp) return;
+
+  const sheet = Object.values(state.files.ecp)[0];
+  if (!sheet || sheet.length < 2) return;
+
+  const rows = sheet.slice(1).filter(r =>
+      Number(r[0]) === year && Number(r[1]) === month
+  );
+
+  if (rows.length === 0) return;
+
+  // Lấy dữ liệu theo yêu cầu
+  const plvKH = rows[0][2] || 0;  // C
+  const plvBS = rows[0][3] || 0;  // D
+  const plvDX = rows[0][4] || 0;  // E
+  const hoanHuy = rows[0][5] || 0; // F
+
+  // 1. PLV trong tháng
+  createChart("c-ecp1", "pie", {
+      "Kế hoạch": plvKH,
+      "Bổ sung": plvBS,
+      "Đột xuất": plvDX
+  }, "PLV trong tháng", true);
+
+  // 2. Tỷ lệ hoãn hủy
+  const tongPLV = plvKH + plvBS + plvDX;
+  createChart("c-ecp2", "pie", {
+      "Hoãn/Hủy": hoanHuy,
+      "Thực hiện": tongPLV - hoanHuy
+  }, "Tỷ lệ hoãn hủy", true);
+
+  // 3. PLV lũy kế
+  const rowsYear = sheet.slice(1).filter(r => Number(r[0]) === year);
+
+  const sumKH = rowsYear.reduce((a,b) => a + (Number(b[2])||0), 0);
+  const sumBS = rowsYear.reduce((a,b) => a + (Number(b[3])||0), 0);
+  const sumDX = rowsYear.reduce((a,b) => a + (Number(b[4])||0), 0);
+
+  createChart("c-ecp3", "pie", {
+      "Kế hoạch": sumKH,
+      "Bổ sung": sumBS,
+      "Đột xuất": sumDX
+  }, "PLV lũy kế", true);
+
+  // 4. Lũy kế hoãn hủy
+  const sumHH = rowsYear.reduce((a,b) => a + (Number(b[5])||0), 0);
+  const tongLuyKe = sumKH + sumBS + sumDX;
+
+  createChart("c-ecp4", "pie", {
+      "Hoãn/Hủy": sumHH,
+      "Thực hiện": tongLuyKe - sumHH
+  }, "Lũy kế hoãn hủy", true);
+
+}
+
+// 5. KPI
+function renderSection5_KPI() {
+  ['c-kpi-all', 'c-kpi-cumulative', 'c-kpi-yoy'].forEach(id => {
+    const c = document.getElementById(id); 
+    if(c) { const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); }
+  });
+  
+  if(!state.files.baocao) return;
+  const kpiSheetName = Object.keys(state.files.baocao).find(k => k.toUpperCase() === 'KPI');
+  if(!kpiSheetName) return;
+  const data = state.files.baocao[kpiSheetName];
+  if(!data || data.length<2) return;
+
+  const idxYear = 0; const idxMonth = 1; const idxName = 2; const idxVal = 3;
+
+  const targetUnits = [
+      "Than Uyên", "Đoàn Kết", "Tân Uyên", "Sìn Hồ", "Phong Thổ", "Nậm Hàng", "Bum Tở"
+  ];
+
+  const currentMonthData = data.slice(1).filter(r => {
+    return parseInt(r[idxMonth]) === state.month && parseInt(r[idxYear]) === state.year;
+  });
+
+  const kpiDataMap = {};
+  targetUnits.forEach(unitName => {
+      const row = currentMonthData.find(r => String(r[idxName]).includes(unitName));
+      const val = row ? parseFloat(row[idxVal]) : 0;
+      kpiDataMap[unitName] = val;
+  });
+  
+  const sortedUnits = Object.entries(kpiDataMap).sort(([,a], [,b]) => b - a);
+  const labels1 = sortedUnits.map(([unit]) => unit);
+  const values1 = sortedUnits.map(([,value]) => value);
+  
+  const colors1 = labels1.map((unit, index) => {
+      if (unit === 'Than Uyên') return '#dc2626';
+      return CHART_COLORS[index % CHART_COLORS.length];
+  });
+
+  const ctxAll = document.getElementById('c-kpi-all').getContext('2d');
+  state.charts.push(new Chart(ctxAll, {
+    type: 'bar',
+    data: {
+      labels: labels1,
+      datasets: [{
+        label: `KPI T${state.month}/${state.year}`,
+        data: values1,
+        backgroundColor: colors1,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'x', 
+      plugins: {
+        legend: { display: false },
+        datalabels: { 
+            color: '#000', 
+            anchor: 'end', 
+            align: 'top', 
+            rotation: -90,
+            offset: 0
+        }
+      },
+      scales: { 
+          y: { 
+              beginAtZero: false, 
+              min: 80
+          },
+          x: {
+              ticks: { autoSkip: false, maxRotation: 90, minRotation: 90 }
+          }
+      }
+    }
+  }));
+
+  // KPI cumulative for Than Uyên
+  const dhKpi = data.slice(1).filter(r => {
+    return parseInt(r[idxYear]) === state.year && String(r[idxName]).includes('Than Uyên') && parseInt(r[idxMonth]) <= state.month;
+  }).sort((a,b) => parseInt(a[idxMonth]) - parseInt(b[idxMonth]));
+
+  if(dhKpi.length > 0) {
+      const cumu = []; let sum = 0;
+      for(let i=0; i<dhKpi.length; i++) {
+          sum += parseFloat(dhKpi[i][idxVal]) || 0;
+          cumu.push(sum / (i+1));
+      }
+      const ctx2 = document.getElementById('c-kpi-cumulative').getContext('2d');
+      state.charts.push(new Chart(ctx2, {
+          type: 'line',
+          data: {
+              labels: dhKpi.map(r => `T${r[idxMonth]}`),
+              datasets: [{
+                  label: 'Lũy kế TB',
+                  data: cumu,
+                  borderColor: '#10b981',
+                  backgroundColor: '#10b981',
+                  tension: 0.1
+              }]
+          },
+          options: { scales: { y: { min: 90 } } }
+      }));
+  }
+
+  const curVal = kpiDataMap['Than Uyên'] || 0;
+  const lastYear = state.year - 1;
+  const lastYearRow = data.slice(1).find(r => parseInt(r[idxMonth])===state.month && parseInt(r[idxYear])===lastYear && String(r[idxName]).includes('Than Uyên'));
+  const lastVal = lastYearRow ? parseFloat(lastYearRow[idxVal]) : 0;
+
+  const ctx3 = document.getElementById('c-kpi-yoy').getContext('2d');
+  state.charts.push(new Chart(ctx3, {
+      type: 'bar',
+      data: {
+          labels: [`${state.month}/${lastYear}`, `${state.month}/${state.year}`],
+          datasets: [{
+              label: 'Điểm KPI',
+              data: [lastVal, curVal],
+              backgroundColor: ['#9ca3af', '#dc2626']
+          }]
+      },
+      options: { scales: { y: { min: 80 } }, plugins: { legend: {display: false} } }
+  }));
+}
+
+// 6. OTHER
+function renderSection6_Other() {
+  document.getElementById('other-content').innerText = document.getElementById('m-other').value || "(Chưa có nội dung)";
+}
+
+/*
+  createChart:
+   - id: canvas id
+   - type: chart type (bar,line,pie,doughnut)
+   - dataObj: {label: value}
+   - title: chart title
+   - showValue: whether datalabels visible
+   - forceInteger: if true, datalabels and tooltips show integer (used for counts like incidents)
+*/
+function createChart(id, type, dataObj, title, showValue = true, forceInteger = false) { 
+  const ctxEl = document.getElementById(id);
+  if (!ctxEl) return;
+  // If there is a chart stored under this id, destroy it
+  try { if(state.charts[id] && state.charts[id].destroy) state.charts[id].destroy(); } catch(e){}
+
+  const labels = Object.keys(dataObj);
+  const values = Object.values(dataObj).map(v => Number(v));
+
+  let backgroundColor;
+  if (type === 'pie' || type === 'doughnut') {
+    backgroundColor = labels.map((_,i)=>CHART_COLORS[i % CHART_COLORS.length]);
+  } else {
+    // For bar/line: if multiple labels use colors array, else single color
+    if (labels.length > 1) backgroundColor = labels.map((_,i)=>CHART_COLORS[i % CHART_COLORS.length]);
+    else backgroundColor = ['#3b82f6'];
+  }
+
+  const dataset = {
+    label: title,
+    data: values,
+    backgroundColor,
+    borderColor: type === 'line' ? '#3b82f6' : '#2563eb',
+    fill: false,
+    tension: 0.2,
+    borderWidth: 1
+  };
+
+  const cfg = {
+    type,
+    data: { labels, datasets: [dataset] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: title,
+          font: { size: 16 }
+        },
+        legend: {
+          position: type === "pie" || type === "doughnut" ? "bottom" : "top"
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const raw = Number(ctx.raw);
+              if (forceInteger) {
+                return `${ctx.label}: ${Math.round(raw)}`;
+              }
+              // determine if this is a count distribution (pie/doughnut or c-age/c-dept/c-qual)
+              const isCountDistribution = (type === "pie" || type === "doughnut" || id === "c-dept" || id === "c-qual" || id === "c-age");
+              if (isCountDistribution) {
+                return `${ctx.label}: ${Math.round(raw)}`;
+              } else {
+                return `${ctx.label}: ${raw.toFixed(2).replace(".",",")}`;
+              }
+            }
+          }
+        },
+        datalabels: {
+          display: showValue,
+          color: "#000",
+          anchor: type === "pie" || type === "doughnut" ? "center" : (type === "line" ? "center" : "end"),
+          align: type === "pie" || type === "doughnut" ? "center" : (type === "line" ? "end" : "top"),
+          formatter: function(value, context) {
+              const numValue = Number(value);
+              if (isNaN(numValue)) return '';
+              if (forceInteger) return `${Math.round(numValue)}`;
+              const isCountDistribution = (type === "pie" || type === "doughnut" || id === "c-dept" || id === "c-qual" || id === "c-age");
+              if (isCountDistribution) {
+                  const total = values.reduce((a,b)=>a+b,0);
+                  const percent = total ? Math.round((numValue/total)*100) : 0;
+                  return `${Math.round(numValue)} (${percent}%)`;
+              }
+              if (type === 'line' || type === 'bar') {
+                return numValue.toFixed(2).replace(".", ",");
+              }
+              return numValue.toFixed(2).replace(".", ",");
+          },
+          font: { weight: "bold", size: 11 }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          display: type !== "pie" && type !== "doughnut",
+          ticks: {
+            callback: function(value) {
+                if (type === "bar" || type === "line") {
+                    // If forceInteger, show integer ticks if values are integer-like
+                    if (forceInteger) return `${Math.round(Number(value))}`;
+                    return Number(value).toFixed(1).replace(/\.0$/, '').replace(".", ",");
+                }
+                return value;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  // create and store
+  try {
+    const chart = new Chart(ctxEl, cfg);
+    // store under both array and id for compatibility
+    state.charts.push(chart);
+    state.charts[id] = chart;
+  } catch(e) {
+    console.error('createChart error for', id, e);
+  }
+}
+
+// --- XUẤT FILE WORD ---
+document.getElementById('btn-export-word').onclick = () => {
+    const reportNode = document.getElementById('report-content');
+    const headerNode = document.getElementById('report-header'); 
+
+    if (reportNode.classList.contains('hidden')) {
+        const genButton = document.getElementById('btn-gen');
+        genButton.textContent = 'Vui lòng TẠO BÁO CÁO trước!';
+        genButton.classList.add('animate-pulse');
+        setTimeout(() => {
+            genButton.textContent = 'TẠO BÁO CÁO';
+            genButton.classList.remove('animate-pulse');
+        }, 3000);
+        return;
+    }
+
+    const cloneContent = reportNode.cloneNode(true);
+    const cloneHeader = headerNode.cloneNode(true); 
+
+    // Convert Canvas to Images in Clone
+    const canvases = reportNode.querySelectorAll('canvas');
+    const clonedCanvases = cloneContent.querySelectorAll('canvas');
+
+    canvases.forEach((canvas, index) => {
+        const imgData = canvas.toDataURL("image/png");
+        const img = document.createElement('img');
+        img.src = imgData;
+        img.style.width = '100%';
+        img.style.maxWidth = '600px'; 
+        clonedCanvases[index].parentNode.replaceChild(img, clonedCanvases[index]);
+    });
+
+    // Tạo HTML cho Word, ghép Header vào trước Content
+    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                          xmlns:w='urn:schemas-microsoft-com:office:word' 
+                          xmlns='http://www.w3.org/TR/REC-html40'>
+        <head><meta charset='utf-8'><title>Báo cáo SXKD</title>
+        <style>
+            body { font-family: 'Times New Roman', serif; font-size: 13pt; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 10px; }
+            td, th { border: 1px solid black; padding: 5px; }
+            h1 { font-size: 16pt; text-align: center; color: #003366; text-transform: uppercase; }
+            h2 { font-size: 14pt; }
+            h3 { font-size: 14pt; color: #003366; margin-top: 15px; border-bottom: 1px solid #000; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+        </style>
+        </head><body>`;
+    
+    const sourceHTML = header + cloneHeader.innerHTML + "<br><hr><br>" + cloneContent.innerHTML + "</body></html>";
+
+    const blob = new Blob(['\ufeff', sourceHTML], {
+        type: 'application/msword'
+    });
+    
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `BaoCao_SXKD_T${state.month}_${state.year}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+// XUẤT PDF
+document.getElementById('btn-export-pdf').onclick = () => {
+    window.print();
+};
+</script>
+</body>
+</html>
