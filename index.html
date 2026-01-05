@@ -135,12 +135,17 @@
       <!-- Tổng chiều dài sẽ được tính toán lại trong JS (Chỉ tính trung thế) -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <input id="m-total" placeholder="Tổng chiều dài TT (km)" class="border p-2 rounded text-sm" value="">
-        <input id="m-471" placeholder="471 E6.22 (km)" class="border p-2 rounded text-sm" value="64.61">
-        <input id="m-472" placeholder="472 E6.22 (km)" class="border p-2 rounded text-sm" value="70.23">
-        <input id="m-473" placeholder="473 E6.22 (km)" class="border p-2 rounded text-sm" value="37.82">
-        <input id="m-371" placeholder="371 E6.22 (km)" class="border p-2 rounded text-sm" value="40.23">
-        <input id="m-373" placeholder="373 E6.22 (km)" class="border p-2 rounded text-sm" value="71.77">
-        <input id="m-lt" placeholder="Đường dây hạ thế (km)" class="border p-2 rounded text-sm" value="667.40 ">
+        <input id="m-371" placeholder="371 E29.2 (km)" class="border p-2 rounded text-sm" value="64.61">
+        <input id="m-373" placeholder="373 E29.2 (km)" class="border p-2 rounded text-sm" value="70.23">
+        <input id="m-375" placeholder="375 E29.2 (km)" class="border p-2 rounded text-sm" value="37.82">
+        <input id="m-376" placeholder="376 E29.2 (km)" class="border p-2 rounded text-sm" value="40.23">
+        <input id="m-377" placeholder="377 E29.2 (km)" class="border p-2 rounded text-sm" value="71.77">
+	<input id="m-378" placeholder="378 E29.2 (km)" class="border p-2 rounded text-sm" value="31.72">
+        <input id="m-lt-day" placeholder="Đường dây hạ thế (km)" class="border p-2 rounded text-sm" value="667.40 ">
+    	<input id="m-recloser" placeholder="Máy cắt Recloser (bộ)" class="border p-2 rounded text-sm" value="06 ">
+    	<input id="m-lbs" placeholder="LBS (bộ)" class="border p-2 rounded text-sm" value="13 ">
+    	<input id="m-tubutt" placeholder="Tụ bù trung thế (bộ)" class="border p-2 rounded text-sm" value="04 ">
+    	<input id="m-tbuht" placeholder="Tụ bù hạ thế (bộ)" class="border p-2 rounded text-sm" value="297 ">
       </div>
       <textarea id="m-other" class="w-full border p-2 rounded mt-3 text-sm" placeholder="Nhập nội dung mục 6 (Công tác khác)..."></textarea>
 <div class="mt-6">
@@ -657,7 +662,7 @@ function renderSection3_Tech() {
   // 3.1 TBA (yêu cầu: tổng cộng)
   const tbaArea = document.getElementById('tba-summary-area');
   tbaArea.innerHTML = '';
-  const targetLines = ['471E6.22', '472E6.22', '473E6.22', '371E6.22', '373E6.22']; 
+  const targetLines = ['371E29.2', '373E29.2', '375E29.2', '376E29.2', '377E29.2', '378E29.2']; 
   const tbaDataSheet = state.files.baocao ? (state.files.baocao['Tên các TBA'] || state.files.baocao['TBA']) : null;
   
   let totalCount = 0;
@@ -720,18 +725,23 @@ function renderSection3_Tech() {
 
   // 3.2 Dây
   let totalLengthTT = 0;
-  const wireInputsTT = ['m-471','m-472','m-473','m-371','m-373']; 
+  const wireInputsTT = ['m-371','m-373','m-375','m-376','m-377','m-378']; 
   wireInputsTT.forEach(id=>{ totalLengthTT += parseFloat(document.getElementById(id).value)||0; });
   document.getElementById('m-total').value = totalLengthTT.toFixed(1);
   
   document.getElementById('wire-summary').innerHTML = `<ul class="grid grid-cols-2 gap-2">
     <li class="font-bold text-blue-800">Tổng chiều dài đường dây trung thế: ${totalLengthTT.toFixed(1)} km</li>
-    <li>471 E6.22: ${document.getElementById('m-471').value} km</li>
-    <li>472 E6.22: ${document.getElementById('m-472').value} km</li>
-    <li>473 E6.22: ${document.getElementById('m-473').value} km</li>
-    <li>371 E6.22: ${document.getElementById('m-371').value} km</li>
-    <li>373 E6.22: ${document.getElementById('m-373').value} km</li>
-    <li class="font-bold text-red-700">Đường dây hạ thế: ${document.getElementById('m-lt').value} km</li>
+    <li>371 E29.2: ${document.getElementById('m-371').value} km</li>
+    <li>373 E29.2: ${document.getElementById('m-373').value} km</li>
+    <li>375 E29.2: ${document.getElementById('m-375').value} km</li>
+    <li>376 E29.2: ${document.getElementById('m-376').value} km</li>
+    <li>377 E29.2: ${document.getElementById('m-377').value} km</li>
+    <li>378 E29.2: ${document.getElementById('m-378').value} km</li>
+    <li class="font-bold text-blue-800">Đường dây hạ thế: ${document.getElementById('m-lt-day').value} km</li> 
+    <li class="font-bold text-blue-800">Máy cắt Recloser: ${document.getElementById('m-recloser').value} bộ</li> 
+    <li class="font-bold text-blue-800">LBS: ${document.getElementById('m-lbs').value} bộ</li> 
+    <li class="font-bold text-blue-800">Tụ bù trung thế: ${document.getElementById('m-tubutt').value} bộ</li> 
+    <li class="font-bold text-blue-800">Tụ bù hạ thế: ${document.getElementById('m-tbuht').value} bộ</li>
     </ul>`;
 
   // 3.3 Sự cố
