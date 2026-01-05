@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Báo Cáo SXKD - Đội QLĐLKV Than Uyên </title>
+  <title>Báo Cáo SXKD - Đội QLĐLKV Than Uyên</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- ChartJS & Plugins -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -110,7 +110,7 @@
 
       <!-- Action Buttons -->
       <div class="flex flex-wrap gap-2 border-t pt-4 mt-2">
-        <button id="btn-manual" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 text-sm">Nhập tay số liệu</button>
+        <button id="btn-manual" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 text-sm">Nhập tay số liệu </button>
         <div class="flex-grow"></div>
         <button id="btn-gen" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold shadow text-sm">
           TẠO BÁO CÁO
@@ -135,15 +135,28 @@
       <!-- Tổng chiều dài sẽ được tính toán lại trong JS (Chỉ tính trung thế) -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <input id="m-total" placeholder="Tổng chiều dài TT (km)" class="border p-2 rounded text-sm" value="">
-        <input id="m-371" placeholder="371 E29.2 (km)" class="border p-2 rounded text-sm" value="64.61">
-        <input id="m-373" placeholder="373 E29.2 (km)" class="border p-2 rounded text-sm" value="70.23">
-        <input id="m-375" placeholder="375 E29.2 (km)" class="border p-2 rounded text-sm" value="37.82">
-        <input id="m-376" placeholder="376 E29.2 (km)" class="border p-2 rounded text-sm" value="40.23">
-        <input id="m-377" placeholder="377 E29.2 (km)" class="border p-2 rounded text-sm" value="71.77">
-        <input id="m-378" placeholder="378 E29.2 (km)" class="border p-2 rounded text-sm" value="51.27">
+        <input id="m-471" placeholder="471 E6.22 (km)" class="border p-2 rounded text-sm" value="64.61">
+        <input id="m-472" placeholder="472 E6.22 (km)" class="border p-2 rounded text-sm" value="70.23">
+        <input id="m-473" placeholder="473 E6.22 (km)" class="border p-2 rounded text-sm" value="37.82">
+        <input id="m-371" placeholder="371 E6.22 (km)" class="border p-2 rounded text-sm" value="40.23">
+        <input id="m-373" placeholder="373 E6.22 (km)" class="border p-2 rounded text-sm" value="71.77">
         <input id="m-lt" placeholder="Đường dây hạ thế (km)" class="border p-2 rounded text-sm" value="667.40 ">
       </div>
       <textarea id="m-other" class="w-full border p-2 rounded mt-3 text-sm" placeholder="Nhập nội dung mục 6 (Công tác khác)..."></textarea>
+<div class="mt-6">
+  <h3 class="font-bold text-gray-700 mb-2">📸 Ảnh minh họa cho Mục 6:</h3>
+
+  <input type="file" id="manual-images" accept="image/*" multiple hidden>
+  <button onclick="document.getElementById('manual-images').click()"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm">
+      ➕ Tải ảnh
+  </button>
+
+  <!-- Hiển thị danh sách ảnh -->
+  <div id="manual-image-preview"
+       class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  </div>
+</div>
     </div>
 
     <!-- REPORT CONTENT AREA -->
@@ -490,56 +503,151 @@ function renderSection2_Business() {
 }
 
 // ========================
-// 3.3 BÁO CÁO TỔN THẤT (Loss) - giữ nguyên logic
+// 3.3 BÁO CÁO TỔN THẤT (Loss) - CẬP NHẬT XỬ LÝ GIÁ TRỊ ÂM & CÂN ĐỐI TRỤC Y
 // ========================
 function renderLossReport() {
+    const mapping = [
+        { sheet: "Tổn thất đơn vị kỳ thương phẩm", id: "loss-ky", idCum: "loss-ky-cum" },
+        { sheet: "Tổn thất đơn vị cấp điện áp", id: "loss-cap", idCum: "loss-cap-cum" },
+        { sheet: "Tổn thất trung áp", id: "loss-mid", idCum: "loss-mid-cum" },
+        { sheet: "Tổn thất hạ áp", id: "loss-low", idCum: "loss-low-cum" }
+    ];
 
-  const mapping = [
-    { sheet: "Tổn thất đơn vị kỳ thương phẩm", id: "loss-ky", idCum: "loss-ky-cum" },
-    { sheet: "Tổn thất đơn vị cấp điện áp", id: "loss-cap", idCum: "loss-cap-cum" },
-    { sheet: "Tổn thất trung áp", id: "loss-mid", idCum: "loss-mid-cum" },
-    { sheet: "Tổn thất hạ áp", id: "loss-low", idCum: "loss-low-cum" }
-  ];
+    mapping.forEach(item => {
+        const sheet = state.files.baocao[item.sheet];
+        if (!sheet || sheet.length < 2) return;
+        const rows = sheet.slice(1);
+        
+        const currentYear = state.year;
+        const lastYear = currentYear - 1;
 
-  mapping.forEach(item => {
-    const sheet = state.files.baocao[item.sheet];
-    if (!sheet || sheet.length < 2) return;
+        let curSumC = Array(12).fill(0), curSumD = Array(12).fill(0);
+        let lastSumC = Array(12).fill(0), lastSumD = Array(12).fill(0);
+        
+        let barLabels = [];
+        let barValues = [];
 
-    const rows = sheet.slice(1); 
-    let labels = [];
-    let values = [];
-    let cumValues = [];
+        rows.forEach(r => {
+            const year = parseInt(r[0]);
+            const month = parseInt(r[1]);
+            const cVal = parseFloat(r[2]) || 0;
+            const dVal = parseFloat(r[3]) || 0;
+            const loss = parseFloat(r[4]) || 0;
 
-    let sumC = 0, sumD = 0;
+            if (month === state.month) {
+                barLabels.push(year.toString());
+                barValues.push(loss);
+            }
 
-    rows.forEach(r => {
-      const year = parseInt(r[0]);
-      const month = parseInt(r[1]);
-      const cVal = parseFloat(r[2]) || 0;
-      const dVal = parseFloat(r[3]) || 0;
-      const loss = parseFloat(r[4]) || 0;
+            if (year === currentYear) {
+                curSumC[month - 1] = cVal;
+                curSumD[month - 1] = dVal;
+            } else if (year === lastYear) {
+                lastSumC[month - 1] = cVal;
+                lastSumD[month - 1] = dVal;
+            }
+        });
 
-      if (month === state.month) {
-        labels.push(year.toString());
-        values.push(Number(loss));   // không format tại đây
-      }
+        let currentYearLine = [];
+        let lastYearLine = [];
+        let allValues = []; // Dùng để tính toán min/max cho trục Y
 
-      if (year === state.year && month <= state.month) {
-        sumC += cVal;
-        sumD += dVal;
-        cumValues.push((sumD / sumC) * 100);
-      }
+        for (let i = 0; i < 12; i++) {
+            // Lũy kế năm hiện tại
+            let sC_cur = 0, sD_cur = 0;
+            for (let j = 0; j <= i; j++) { sC_cur += curSumC[j]; sD_cur += curSumD[j]; }
+            let vCur = sC_cur !== 0 ? (sD_cur / sC_cur) * 100 : null;
+            currentYearLine.push(vCur);
+            if (vCur !== null) allValues.push(vCur);
+
+            // Lũy kế năm trước
+            let sC_last = 0, sD_last = 0;
+            for (let j = 0; j <= i; j++) { sC_last += lastSumC[j]; sD_last += lastSumD[j]; }
+            let vLast = sC_last !== 0 ? (sD_last / sC_last) * 100 : null;
+            lastYearLine.push(vLast);
+            if (vLast !== null) allValues.push(vLast);
+        }
+
+        // TÍNH TOÁN THANG ĐO ĐỂ ĐƯỜNG LINE NẰM GIỮA (BAO GỒM CẢ GIÁ TRỊ ÂM)
+        let minVal = allValues.length ? Math.min(...allValues) : 0;
+        let maxVal = allValues.length ? Math.max(...allValues) : 10;
+        
+        // Tạo khoảng đệm 30% dải dữ liệu để đường line không chạm biên
+        let range = maxVal - minVal;
+        let padding = range * 0.3 || 5; 
+        let yMin = minVal - padding;
+        let yMax = maxVal + padding;
+
+        // VẼ BIỂU ĐỒ CỘT
+        createChart(item.id, "bar", Object.fromEntries(barLabels.map((y, i) => [y, barValues[i]])), "Tỷ lệ tổn thất tháng " + state.month, true);
+
+        // VẼ BIỂU ĐỒ LINE
+        const lineCtx = document.getElementById(item.idCum).getContext('2d');
+        const oldChart = Chart.getChart(item.idCum);
+        if (oldChart) oldChart.destroy();
+
+        new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: 12 }, (_, i) => `T${i + 1}`),
+                datasets: [
+                    {
+                        label: `Lũy kế năm ${currentYear} (%)`,
+                        data: currentYearLine,
+                        borderColor: '#ef4444',
+                        backgroundColor: '#ef4444',
+                        borderWidth: 2,
+                        tension: 0.2,
+                        datalabels: { 
+                            align: 'top', 
+                            anchor: 'end', 
+                            color: '#000', 
+                            font: { weight: 'bold', size: 10 },
+                            offset: 4
+                        }
+                    },
+                    {
+                        label: `Lũy kế cùng kỳ ${lastYear} (%)`,
+                        data: lastYearLine,
+                        borderColor: '#2563eb',
+                        backgroundColor: '#2563eb',
+                        borderWidth: 2,
+                        tension: 0.2,
+                        datalabels: { 
+                            align: 'bottom', 
+                            anchor: 'start', 
+                            color: '#000', 
+                            font: { weight: 'bold', size: 10 },
+                            offset: 4
+                        }
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom' },
+                    datalabels: {
+                        display: true,
+                        formatter: (v) => v !== null ? v.toFixed(2) : ''
+                    }
+                },
+                scales: {
+                    y: { 
+                        min: yMin, 
+                        max: yMax,
+                        grid: {
+                            color: (context) => (context.tick.value === 0 ? '#000' : '#e5e7eb'), // Làm đậm đường mốc 0
+                            lineWidth: (context) => (context.tick.value === 0 ? 2 : 1)
+                        },
+                        title: { display: true, text: '%' } 
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
     });
-
-    // Biểu đồ cột so sánh cùng kỳ
-    createChart(item.id, "bar", Object.fromEntries(labels.map((y,i)=>[y,values[i]])), "Tỷ lệ tổn thất", true);
-
-    // Biểu đồ lũy kế
-    createChart(item.idCum, "line", 
-      Object.fromEntries(cumValues.map((v,i)=>[`T${i+1}`, v])),
-      "Lũy kế tổn thất", 
-      true);
-  });
 }
 
 // 3. KỸ THUẬT
@@ -549,7 +657,7 @@ function renderSection3_Tech() {
   // 3.1 TBA (yêu cầu: tổng cộng)
   const tbaArea = document.getElementById('tba-summary-area');
   tbaArea.innerHTML = '';
-  const targetLines = ['371E29.2', '373E29.2', '375E29.2', '376E29.2', '377E29.2', '378E29.2']; 
+  const targetLines = ['471E6.22', '472E6.22', '473E6.22', '371E6.22', '373E6.22']; 
   const tbaDataSheet = state.files.baocao ? (state.files.baocao['Tên các TBA'] || state.files.baocao['TBA']) : null;
   
   let totalCount = 0;
@@ -612,18 +720,17 @@ function renderSection3_Tech() {
 
   // 3.2 Dây
   let totalLengthTT = 0;
-  const wireInputsTT = ['m-371','m-373','m-375','m-376','m-377','m-378']; 
+  const wireInputsTT = ['m-471','m-472','m-473','m-371','m-373']; 
   wireInputsTT.forEach(id=>{ totalLengthTT += parseFloat(document.getElementById(id).value)||0; });
   document.getElementById('m-total').value = totalLengthTT.toFixed(1);
   
   document.getElementById('wire-summary').innerHTML = `<ul class="grid grid-cols-2 gap-2">
     <li class="font-bold text-blue-800">Tổng chiều dài đường dây trung thế: ${totalLengthTT.toFixed(1)} km</li>
-    <li>371 E29.2: ${document.getElementById('m-371').value} km</li>
-    <li>373 E29.2: ${document.getElementById('m-373').value} km</li>
-    <li>375 E29.2: ${document.getElementById('m-375').value} km</li>
-    <li>376 E29.2: ${document.getElementById('m-376').value} km</li>
-    <li>377 E29.2: ${document.getElementById('m-377').value} km</li>
-    <li>378 E29.2: ${document.getElementById('m-378').value} km</li>
+    <li>471 E6.22: ${document.getElementById('m-471').value} km</li>
+    <li>472 E6.22: ${document.getElementById('m-472').value} km</li>
+    <li>473 E6.22: ${document.getElementById('m-473').value} km</li>
+    <li>371 E6.22: ${document.getElementById('m-371').value} km</li>
+    <li>373 E6.22: ${document.getElementById('m-373').value} km</li>
     <li class="font-bold text-red-700">Đường dây hạ thế: ${document.getElementById('m-lt').value} km</li>
     </ul>`;
 
@@ -984,18 +1091,25 @@ function renderSection5_KPI() {
 
 // 6. OTHER
 function renderSection6_Other() {
-  document.getElementById('other-content').innerText = document.getElementById('m-other').value || "(Chưa có nội dung)";
-}
+  const text = document.getElementById('m-other').value || "(Chưa có nội dung)";
+  let html = `<div class="mb-4 whitespace-pre-line">${text}</div>`;
 
-/*
-  createChart:
-   - id: canvas id
-   - type: chart type (bar,line,pie,doughnut)
-   - dataObj: {label: value}
-   - title: chart title
-   - showValue: whether datalabels visible
-   - forceInteger: if true, datalabels and tooltips show integer (used for counts like incidents)
-*/
+  if (manualImages.length > 0) {
+      html += `<h4 class="font-bold mt-4 mb-2 text-blue-700">📷 Hình ảnh minh họa:</h4>`;
+
+      manualImages.forEach((img) => {
+          html += `
+              <div class="my-4 border p-2 rounded bg-gray-50" style="text-align:${img.align}">
+                  <img src="${img.src}"
+                       style="width:${img.width}px; border-radius:6px; display:inline-block;" />
+                  <div class="mt-1 text-sm italic">${img.caption || "(Không có mô tả)"}</div>
+              </div>
+          `;
+      });
+  }
+
+  document.getElementById('other-content').innerHTML = html;
+}
 function createChart(id, type, dataObj, title, showValue = true, forceInteger = false) { 
   const ctxEl = document.getElementById(id);
   if (!ctxEl) return;
@@ -1176,7 +1290,90 @@ document.getElementById('btn-export-word').onclick = () => {
 // XUẤT PDF
 document.getElementById('btn-export-pdf').onclick = () => {
     window.print();
-};
+};  // <-- đóng hàm và đóng dấu } đầy đủ
+
+// ====== QUẢN LÝ ẢNH & MÔ TẢ MỤC 6 ======
+// ====== QUẢN LÝ ẢNH & MÔ TẢ MỤC 6 ======
+let manualImages = []; // [{src, caption, align, width}]
+
+document.getElementById("manual-images").addEventListener("change", function (e) {
+    const files = Array.from(e.target.files);
+
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            manualImages.push({
+                src: evt.target.result,
+                caption: "",
+                align: "center",
+                width: 400
+            });
+            renderManualImages();
+        };
+        reader.readAsDataURL(file);
+    });
+
+    e.target.value = "";
+});
+
+function renderManualImages() {
+    const box = document.getElementById("manual-image-preview");
+    box.innerHTML = "";
+
+    manualImages.forEach((obj, index) => {
+        const div = document.createElement("div");
+        div.className = "border rounded p-2 bg-white shadow";
+
+        div.innerHTML = `
+            <img src="${obj.src}"
+                 style="width:${obj.width}px; display:block; margin:auto;">
+
+            <textarea 
+                class="w-full border rounded p-1 mt-2 text-sm"
+                placeholder="Nhập mô tả ảnh..."
+                oninput="updateManualCaption(${index}, this.value)"
+            >${obj.caption}</textarea>
+
+            <div class="flex items-center gap-1 mt-2 text-xs">
+                <button onclick="updateImageAlign(${index}, 'left')" class="px-2 py-1 bg-gray-200 rounded">⬅️ Trái</button>
+                <button onclick="updateImageAlign(${index}, 'center')" class="px-2 py-1 bg-gray-200 rounded">🔳 Giữa</button>
+                <button onclick="updateImageAlign(${index}, 'right')" class="px-2 py-1 bg-gray-200 rounded">➡️ Phải</button>
+            </div>
+
+            <label class="text-xs mt-2 block">Kích thước (px):</label>
+            <input type="number" min="100" max="1200"
+                   value="${obj.width}"
+                   oninput="updateImageWidth(${index}, this.value)"
+                   class="w-full border rounded px-1 py-1 text-sm mt-1"/>
+
+            <button onclick="deleteManualImage(${index})"
+                class="mt-2 bg-red-600 hover:bg-red-700 text-white w-full py-1 text-xs rounded">
+                Xóa ảnh
+            </button>
+        `;
+
+        box.appendChild(div);
+    });
+}
+
+function updateManualCaption(i, text) {
+    manualImages[i].caption = text;
+}
+
+function updateImageAlign(i, align) {
+    manualImages[i].align = align;
+    renderManualImages();
+}
+
+function updateImageWidth(i, width) {
+    manualImages[i].width = Number(width);
+    renderManualImages();
+}
+
+function deleteManualImage(i) {
+    manualImages.splice(i, 1);
+    renderManualImages();
+}
 </script>
 </body>
 </html>
